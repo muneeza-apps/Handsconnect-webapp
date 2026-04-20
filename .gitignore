@@ -1,0 +1,23 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+**/doc/api/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local env
+.env
+.env.*
+
+# Build outputs (release web bundle is force-added for GitHub Pages)
+/build/
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
