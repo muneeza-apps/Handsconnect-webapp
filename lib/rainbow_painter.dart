@@ -7,15 +7,9 @@ import 'hand_provider.dart';
 class RainbowPainter extends CustomPainter {
   const RainbowPainter({
     required this.model,
-    this.strokeWidth = 3.0,
-    this.glowSigma = 5.0,
-    this.pinchDistanceThreshold = 0.08,
   });
 
   final HandModel model;
-  final double strokeWidth;
-  final double glowSigma;
-  final double pinchDistanceThreshold;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -29,9 +23,11 @@ class RainbowPainter extends CustomPainter {
 
     final nowMs = DateTime.now().millisecondsSinceEpoch.toDouble();
     final framePhase = (nowMs / 2400.0) % 1.0;
-    final pinchStrength = _pinchStrength(left, right);
-    final widthBoost = 1.0 + (pinchStrength * 1.8);
-    final glowBoost = 1.0 + (pinchStrength * 2.2);
+
+    final neonColors = const [
+      Color(0xFF00FFFF), // Neon Cyan
+      Color(0xFF39FF14), // Neon Lime
+    ];
 
     for (var i = 0; i < count; i++) {
       final leftPoint = left[i];
@@ -49,75 +45,40 @@ class RainbowPainter extends CustomPainter {
         rightPoint.y!.clamp(0.0, 1.0) * size.height,
       );
 
-      final hue = ((i / count) + framePhase) % 1.0 * 360.0;
-      final rainbow = HSVColor.fromAHSV(
-        1.0,
-        hue,
-        0.85 + (0.15 * pinchStrength),
-        0.90 + (0.10 * pinchStrength),
-      ).toColor();
+      final colorPhase = ((i / count) + framePhase) % 1.0;
+      final scaledPhase = colorPhase * neonColors.length;
+      final colorIndex = scaledPhase.floor();
+      final nextColorIndex = (colorIndex + 1) % neonColors.length;
+      final t = scaledPhase - colorIndex;
+      final glowColor = Color.lerp(neonColors[colorIndex], neonColors[nextColorIndex], t)!;
 
       final bloomPaint = Paint()
-        ..color = rainbow.withValues(alpha: 0.20 + (0.25 * pinchStrength))
+        ..color = glowColor.withValues(alpha: 0.6)
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = (strokeWidth + 6.0) * widthBoost
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowSigma * 1.8 * glowBoost);
-
-      final glowPaint = Paint()
-        ..color = rainbow.withValues(alpha: 0.40 + (0.25 * pinchStrength))
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = (strokeWidth + 2.0) * widthBoost
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowSigma * glowBoost);
+        ..strokeWidth = 6.0
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
 
       final linePaint = Paint()
-        ..color = rainbow
+        ..color = glowColor
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = strokeWidth * widthBoost;
+        ..strokeWidth = 2.0;
+
+      final jointPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill
+        ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 3.0);
 
       canvas.drawLine(start, end, bloomPaint);
-      canvas.drawLine(start, end, glowPaint);
       canvas.drawLine(start, end, linePaint);
+      canvas.drawCircle(start, 3.0, jointPaint);
+      canvas.drawCircle(end, 3.0, jointPaint);
     }
-  }
-
-  double _pinchStrength(List<HandPoint> left, List<HandPoint> right) {
-    const fingerTips = <int>[4, 8, 12, 16, 20];
-    double? minDistance;
-
-    for (final tip in fingerTips) {
-      if (tip >= left.length || tip >= right.length) {
-        continue;
-      }
-      final leftTip = left[tip];
-      final rightTip = right[tip];
-      if (!leftTip.isValid || !rightTip.isValid) {
-        continue;
-      }
-
-      final dx = leftTip.x! - rightTip.x!;
-      final dy = leftTip.y! - rightTip.y!;
-      final distance = math.sqrt((dx * dx) + (dy * dy));
-      if (minDistance == null || distance < minDistance) {
-        minDistance = distance;
-      }
-    }
-
-    if (minDistance == null) {
-      return 0.0;
-    }
-
-    final normalized = ((pinchDistanceThreshold - minDistance) / pinchDistanceThreshold).clamp(0.0, 1.0);
-    return normalized;
   }
 
   @override
   bool shouldRepaint(covariant RainbowPainter oldDelegate) {
-    return oldDelegate.model != model ||
-        oldDelegate.strokeWidth != strokeWidth ||
-        oldDelegate.glowSigma != glowSigma ||
-        oldDelegate.pinchDistanceThreshold != pinchDistanceThreshold;
+    return oldDelegate.model != model;
   }
 }
