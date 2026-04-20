@@ -14,7 +14,7 @@
 .env
 .env.*
 
-# Build outputs (release web bundle is force-added for GitHub Pages)
+# Build outputs (`build/web` is force-added if you want it in git; `docs/` is the GitHub Pages folder)
 /build/
 
 # Misc
